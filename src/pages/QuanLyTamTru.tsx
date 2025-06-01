@@ -17,6 +17,7 @@ const QuanLyTamTru: React.FC = () => {
   const [selectedFilter, setSelectedFilter] = useState("Tất cả");
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [editingData, setEditingData] = useState<TamTruData | null>(null);
+  const [searchKeyword, setSearchKeyword] = useState(""); // Thêm state cho tìm kiếm
   const [dataList, setDataList] = useState<TamTruData[]>([
     {
       id: "1",
@@ -94,9 +95,24 @@ const QuanLyTamTru: React.FC = () => {
     setIsDropdownOpen(false);
   };
 
-  const filteredData = selectedFilter === "Tất cả"
-    ? dataList
-    : dataList.filter(item => item.trangThai === selectedFilter);
+  // Xử lý tìm kiếm
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchKeyword(e.target.value);
+  };
+
+  // Logic lọc dữ liệu kết hợp cả filter và search
+  const filteredData = dataList.filter(item => {
+    // Lọc theo trạng thái
+    const matchesFilter = selectedFilter === "Tất cả" || item.trangThai === selectedFilter;
+    
+    // Lọc theo từ khóa tìm kiếm (tìm trong họ tên, địa chỉ, nội dung đề nghị)
+    const matchesSearch = searchKeyword === "" || 
+      item.hoTen.toLowerCase().includes(searchKeyword.toLowerCase()) ||
+      item.diaChi.toLowerCase().includes(searchKeyword.toLowerCase()) ||
+      item.noiDungDeNghi.toLowerCase().includes(searchKeyword.toLowerCase());
+    
+    return matchesFilter && matchesSearch;
+  });
 
   return (
     <>
@@ -145,12 +161,14 @@ const QuanLyTamTru: React.FC = () => {
               )}
             </div>
 
-            {/* Tìm kiếm (placeholder - chưa implement) */}
+            {/* Thanh tìm kiếm */}
             <input
               type="text"
-              placeholder="Tìm kiếm tạm trú/tạm vắng"
+              placeholder="Tìm kiếm theo tên, địa chỉ hoặc nội dung"
               className="flex-1 p-2 border rounded-md shadow-sm text-sm"
               style={{ fontWeight: '400' }}
+              value={searchKeyword}
+              onChange={handleSearchChange}
             />
 
             <button 
@@ -167,7 +185,14 @@ const QuanLyTamTru: React.FC = () => {
 
           <div className="mt-6 bg-white rounded-md shadow-md overflow-hidden border border-gray-200">
             <div className="p-4 bg-gray-100 border-b border-gray-200">
-              <h2 className="text-lg font-medium text-gray-900" style={{ fontWeight: '500' }}>Danh sách tạm trú/tạm vắng</h2>
+              <h2 className="text-lg font-medium text-gray-900" style={{ fontWeight: '500' }}>
+                Danh sách tạm trú/tạm vắng 
+                {searchKeyword && (
+                  <span className="text-sm font-normal text-gray-600">
+                    ({filteredData.length} kết quả cho "{searchKeyword}")
+                  </span>
+                )}
+              </h2>
             </div>
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
@@ -181,37 +206,48 @@ const QuanLyTamTru: React.FC = () => {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {filteredData.map((item) => (
-                  <tr key={item.id}>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900" style={{ fontWeight: '500' }}>{item.hoTen}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700" style={{ fontWeight: '400' }}>{item.trangThai}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700" style={{ fontWeight: '400' }}>{item.diaChi}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700" style={{ fontWeight: '400' }}>{item.tuNgay} → {item.denNgay}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700" style={{ fontWeight: '400' }}>{item.noiDungDeNghi}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm">
-                      <div className="flex gap-3">
-                        <button 
-                          onClick={() => handleEdit(item.id)} 
-                          className="text-blue-600 hover:text-blue-800 p-1 rounded hover:bg-blue-50 transition-colors"
-                          title="Sửa"
-                        >
-                          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                          </svg>
-                        </button>
-                        <button 
-                          onClick={() => handleDelete(item.id)} 
-                          className="text-red-600 hover:text-red-800 p-1 rounded hover:bg-red-50 transition-colors"
-                          title="Xóa"
-                        >
-                          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                          </svg>
-                        </button>
-                      </div>
+                {filteredData.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} className="px-6 py-8 text-center text-gray-500 text-sm">
+                      {searchKeyword ? 
+                        `Không tìm thấy kết quả nào cho "${searchKeyword}"` : 
+                        "Không có dữ liệu"
+                      }
                     </td>
                   </tr>
-                ))}
+                ) : (
+                  filteredData.map((item) => (
+                    <tr key={item.id}>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900" style={{ fontWeight: '500' }}>{item.hoTen}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700" style={{ fontWeight: '400' }}>{item.trangThai}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700" style={{ fontWeight: '400' }}>{item.diaChi}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700" style={{ fontWeight: '400' }}>{item.tuNgay} → {item.denNgay}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700" style={{ fontWeight: '400' }}>{item.noiDungDeNghi}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm">
+                        <div className="flex gap-3">
+                          <button 
+                            onClick={() => handleEdit(item.id)} 
+                            className="text-blue-600 hover:text-blue-800 p-1 rounded hover:bg-blue-50 transition-colors"
+                            title="Sửa"
+                          >
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                            </svg>
+                          </button>
+                          <button 
+                            onClick={() => handleDelete(item.id)} 
+                            className="text-red-600 hover:text-red-800 p-1 rounded hover:bg-red-50 transition-colors"
+                            title="Xóa"
+                          >
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
           </div>
